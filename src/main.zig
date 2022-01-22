@@ -6,7 +6,8 @@ const Obstacle = @import("Obstacle.zig");
 
 const GameState = enum { title, running, game_over };
 
-var buffer: [1000]u8 = undefined;
+//Allocator for printing score
+var buffer: [5]u8 = undefined;
 var fba = std.heap.FixedBufferAllocator.init(&buffer);
 const allocator = fba.allocator();
 
@@ -28,17 +29,19 @@ export fn start() void {
         0x071821,
     };
 
-    prng = std.rand.DefaultPrng.init(0);
-    random = prng.random();
-
-    player = Player.init();
-    obstacles = std.BoundedArray(Obstacle, 40).init(0) catch @panic("couldn't init obstacles array");
     current_game_state = .title;
 }
 
 fn startGame() void {
     prng = std.rand.DefaultPrng.init(frame_count);
     random = prng.random();
+    score = 0;
+    player = Player.init();
+
+    obstacles = std.BoundedArray(Obstacle, 40).init(0) catch @panic("couldn't init obstacles array");
+    var obstacle = Obstacle{.x = 120};
+    obstacles.append(obstacle) catch @panic("couldn't append obstacle");
+
     current_game_state = .running;
 }
 
@@ -50,6 +53,7 @@ export fn update() void {
         updateObstacles();
         if (findCollision()) {
             current_game_state = .game_over;
+            player.hitObstacle();
             w4.tone(620 | (140 << 16), (10 << 24) | 24, 100, w4.TONE_MODE2);
         }
         if (frame_count % 60 == 0) score += 1;
@@ -65,11 +69,8 @@ fn processInput() void {
         player.jump();
     }
 
-    if (current_game_state == .title and just_pressed != 0) {
+    if ((current_game_state == .title and just_pressed != 0) or (current_game_state == .game_over and just_pressed & (w4.BUTTON_1 | w4.BUTTON_2) != 0)) {
         startGame();
-    }
-    if (current_game_state == .game_over and just_pressed & (w4.BUTTON_1 | w4.BUTTON_2) != 0) {
-        reset();
     }
 
     prev_state = gamepad;
@@ -120,11 +121,7 @@ fn draw() void {
     }
 
     if (current_game_state != .title) {
-        w4.DRAW_COLORS.* = 0x3;
-        //ground
-        w4.hline(0, 72, 160);
-        w4.rect(0, 73, 160, 87);
-
+        world.drawGround();
         drawScore();
         drawObstacles();
         player.draw();
@@ -165,14 +162,4 @@ fn drawGameOver() void {
     w4.rect(0, 20, 160, 30);
     w4.DRAW_COLORS.* = 0x0001;
     w4.text("Game Over", 45, 30);
-}
-
-fn reset() void {
-    prng = std.rand.DefaultPrng.init(frame_count);
-    random = prng.random();
-
-    player = Player.init();
-    obstacles = std.BoundedArray(Obstacle, 40).init(0) catch @panic("couldn't init obstacles array");
-    score = 0;
-    current_game_state = .running;
 }
