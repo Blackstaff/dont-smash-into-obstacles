@@ -7,11 +7,10 @@ const peak_y = 32;
 
 x: i32,
 y: i32,
-speed: u8,
 vertical_velocity: f32,
 
 pub fn init() Self {
-    return Self{ .x = 10, .y = ground_level, .speed = 1, .vertical_velocity = 0 };
+    return Self{ .x = 10, .y = ground_level, .vertical_velocity = 0 };
 }
 
 pub fn draw(self: Self) void {

@@ -4,6 +4,8 @@ const world = @import("world.zig");
 const Player = @import("Player.zig");
 const Obstacle = @import("Obstacle.zig");
 
+const GameState = enum { title, running, game_over };
+
 var buffer: [1000]u8 = undefined;
 var fba = std.heap.FixedBufferAllocator.init(&buffer);
 const allocator = fba.allocator();
@@ -15,7 +17,7 @@ var frame_count: u32 = 0;
 var player: Player = undefined;
 var obstacles: std.BoundedArray(Obstacle, 40) = undefined;
 var prev_state: u8 = 0;
-var is_game_over: bool = false;
+var current_game_state: GameState = undefined;
 var score: u32 = 0;
 
 export fn start() void {
@@ -24,16 +26,24 @@ export fn start() void {
 
     player = Player.init();
     obstacles = std.BoundedArray(Obstacle, 40).init(0) catch @panic("couldn't init obstacles array");
+    current_game_state = .title;
+}
+
+fn startGame() void {
+    prng = std.rand.DefaultPrng.init(frame_count);
+    random = prng.random();
+    current_game_state = .running;
 }
 
 export fn update() void {
     frame_count +%= 1;
     processInput();
-    player.update();
-    if (!is_game_over) {
+    if (current_game_state == .running) {
+        player.update();
         updateObstacles();
         if (findCollision()) {
-            is_game_over = true;
+            current_game_state = .game_over;
+            w4.tone(620 | (140 << 16), (10 << 24) | 24, 100, w4.TONE_MODE2);
         }
         if (frame_count % 60 == 0) score += 1;
     }
@@ -44,11 +54,14 @@ fn processInput() void {
     const gamepad = w4.GAMEPAD1.*;
     const just_pressed = gamepad & (gamepad ^ prev_state);
 
-    if (just_pressed & w4.BUTTON_UP != 0) {
+    if (current_game_state == .running and just_pressed & w4.BUTTON_UP != 0) {
         player.jump();
     }
 
-    if (is_game_over and just_pressed & (w4.BUTTON_1 | w4.BUTTON_2) != 0) {
+    if (current_game_state == .title and just_pressed != 0) {
+        startGame();
+    }
+    if (current_game_state == .game_over and just_pressed & (w4.BUTTON_1 | w4.BUTTON_2) != 0) {
         reset();
     }
 
@@ -95,20 +108,29 @@ fn fetchClosestObstacle() ?Obstacle {
 }
 
 fn draw() void {
-    w4.DRAW_COLORS.* = 0x3;
-    // score/ui
-    // w4.rect(0, 0, 160, 16);
-
-    //ground
-    w4.hline(0, 72, 160);
-
-    drawScore();
-    drawObstacles();
-    player.draw();
-
-    if (is_game_over) {
-        drawGameOver();
+    if (current_game_state == .title) {
+        drawTitle();
     }
+
+    if (current_game_state != .title) {
+        w4.DRAW_COLORS.* = 0x3;
+        //ground
+        w4.hline(0, 72, 160);
+
+        drawScore();
+        drawObstacles();
+        player.draw();
+
+        if (current_game_state == .game_over) {
+            drawGameOver();
+        }
+    }
+}
+
+fn drawTitle() void {
+    w4.DRAW_COLORS.* = 0x0004;
+    w4.text("Press any button", 15, 50);
+    w4.text("to start", 45, 60);
 }
 
 fn drawObstacles() void {
@@ -144,5 +166,5 @@ fn reset() void {
     player = Player.init();
     obstacles = std.BoundedArray(Obstacle, 40).init(0) catch @panic("couldn't init obstacles array");
     score = 0;
-    is_game_over = false;
+    current_game_state = .running;
 }
