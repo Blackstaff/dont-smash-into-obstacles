@@ -2,7 +2,13 @@ const w4 = @import("wasm4.zig");
 
 const Self = @This();
 
+const obstacle_width = 8;
+const obstacle_height = 8;
+const obstacle_flags = 0; // BLIT_1BPP
+const obstacle = [8]u8{ 0x00,0x5a,0x00,0x5a,0x00,0x5a,0x00,0x5a };
+
 x: i32,
+const y = 64;
 
 const smiley = [8]u8{
     0b11000011,
@@ -20,7 +26,8 @@ pub fn spawn() Self {
 }
 
 pub fn draw(self: Self) void {
-    w4.blit(&smiley, self.x, 64, 8, 8, w4.BLIT_1BPP);
+    w4.DRAW_COLORS.* = 0x0024;
+    w4.blit(&obstacle, self.x, y, obstacle_width, obstacle_height, obstacle_flags);
 }
 
 pub fn updatePosition(self: *Self) void {

@@ -21,6 +21,13 @@ var current_game_state: GameState = undefined;
 var score: u32 = 0;
 
 export fn start() void {
+    w4.PALETTE.* = .{
+        0xe0f8cf,
+        0xe5b083,
+        0x306850,
+        0x071821,
+    };
+
     prng = std.rand.DefaultPrng.init(0);
     random = prng.random();
 
@@ -116,6 +123,7 @@ fn draw() void {
         w4.DRAW_COLORS.* = 0x3;
         //ground
         w4.hline(0, 72, 160);
+        w4.rect(0, 73, 160, 87);
 
         drawScore();
         drawObstacles();
