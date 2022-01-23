@@ -134,7 +134,7 @@ fn draw() void {
 
 fn drawTitle() void {
     w4.DRAW_COLORS.* = 0x0004;
-    w4.text("Press any button", 15, 50);
+    w4.text("Press UP button", 15, 50);
     w4.text("to start", 45, 60);
 }
 
